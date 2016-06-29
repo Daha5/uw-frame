@@ -67,26 +67,24 @@ define(['angular','require'], function(angular, require) {
      }
 
      $scope.markAnnouncementsSeen = function(announcement, liked) {
-       var seenAnnouncements = $localStorage.seenAnnoucements || [];
-       seenAnnouncements.push(announcement.id);
-       $localStorage.seenAnnoucements.push(announcement.id);
-       $localStorage.lastSeenAnnouncementId = $scope.announcements[$scope.announcements.length - 1].id;
+       //make sure sessionStorage.seenAnnouncements is at least initialized before trying to modify it
+       $sessionStorage.seenAnnoucements = $sessionStorage.seenAnnoucements || [];
+       $sessionStorage.seenAnnoucements.push(announcement.id);
        //push change to storage to keep it in sync
        portalFeaturesService.saveLastSeenFeature(portalFeaturesService.TYPES.ANNOUNCEMENTS, $localStorage.lastSeenAnnouncementId);
-
-       if($scope.headerCtrl) {
-         $scope.headerCtrl.navbarCollapsed = true;
-       }
+       
+       //set the features in scope to reflect new announcement dismissal
        postGetData($scope.features, true);
+       
        //send ga event for features, if they read more or dismissed, and what was the last id
-       miscService.pushGAEvent('feature',liked ? 'read more' : 'dismissed', $localStorage.lastSeenAnnouncementId);
+       miscService.pushGAEvent('feature',liked ? 'read more' : 'dismissed', announcement.id);
      }
 
      //local functions ---------------------------------------------------------
 
      var postGetData = function(features, justSaved) {
        if (features.length > 0) {
-         $scope.features = features; //just setting this to scope so we can use it laterco
+         $scope.features = features; //just setting this to scope so we can use it later
 
          // handle legacy local storage
          if ($localStorage.lastSeenFeature === -1) {
@@ -97,16 +95,22 @@ define(['angular','require'], function(angular, require) {
            }
            delete $localStorage.hasSeenWelcome;
          }
+         
+         //handle legacy local storage round 2
+         if($localStorage.lastSeenFeature){
+             
+         }
 
+         //Handles mascot announcement
          if("BUCKY" === $scope.mode || "BUCKY_MOBILE" === $scope.mode) {
            //do bucky announcement
            var announcements = filterFilter(features, {isBuckyAnnouncement : true});
            if(announcements && announcements.length != 0) {
+             
              //filter down to ones they haven't seen
+             //function that returns true/false if announcment has been seen
              var hasNotSeen = function(feature) {
-
                var compare = $localStorage.lastSeenAnnouncementId || 0;
-
                if(feature.id <= compare) {
                  return false;
                } else {
@@ -125,24 +129,24 @@ define(['angular','require'], function(angular, require) {
                    //hasn't started yet
                    return false;
                  }
-
                }
-
              }
-
-             if(!justSaved && portalFeaturesService.dbStoreLastSeenFeature()) { //if we are really initing, then get id from db
-               portalFeaturesService.getLastSeenFeature(portalFeaturesService.TYPES.ANNOUNCEMENTS).then(function(data){
-                 $localStorage.lastSeenAnnouncementId = data.id || $localStorage.lastSeenAnnouncementId;
-                 $scope.announcements = announcements.filter(hasNotSeen);
-               });
-             } else {
-               $scope.announcements = announcements.filter(hasNotSeen);
+             
+             //If seenAnnouncements not in sesssion storage, grab them from persistant storage
+             if(!$sessionStorage.seenAnnoucements && portalFeaturesService.dbStoreLastSeenFeature()){
+                 portalFeaturesService.getLastSeenFeature(portalFeaturesService.TYPES.ANNOUNCEMENTS).then(function(data){
+                     $localStorage.lastSeenAnnouncementId = data.id || $localStorage.lastSeenAnnouncementId;
+                   });
              }
+             $scope.announcements = announcements.filter(hasNotSeen);
+             
+             //Sets the mascot for the announcement
              if($rootScope.portal && $rootScope.portal.theme) {
                $scope.buckyImg = $rootScope.portal.theme.mascotImg || 'img/robot-taco.gif';
              } else {
                $scope.buckyImg = 'img/robot-taco.gif';
              }
+             //Sets watcher so if you switch themes, you switch mascot
              $rootScope.$watch('portal.theme', function(newVal, oldVal) {
                if(newVal === oldVal) {
                  return;

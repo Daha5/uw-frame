@@ -67,6 +67,8 @@ define(['angular'], function(angular) {
           });
       }
     };
+    
+    
 
     var getLastSeenFeature = function(type){
       return keyValueService.getValue(type);

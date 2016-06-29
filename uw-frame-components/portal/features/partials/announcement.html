@@ -2,16 +2,19 @@
   <script type="text/ng-template" id="see-whats-new.html">
     <div>
       <ul style='padding: 0;'>
+        <div 
         <li ng-repeat="announcement in announcements | orderBy:'-id' | limitTo:3">
-          <a href='features' style='font-weight: 800;font-size: larger;' ng-click='markAnnouncementsSeen(true)'>{{announcement.buckyAnnouncement.shortTitle}}</a>
+          <a href='features' style='font-weight: 800;font-size: larger;' ng-click='markAnnouncementsSeen({{announcement.id}}, true)'>{{announcement.buckyAnnouncement.shortTitle}}</a>
           <br>
           <p>
             {{announcement.buckyAnnouncement.shortDesc}}
           </p>
         </li>
+<span>{{announcement.buckyAnnouncement.shortTitle}}</span>
         <li>
-          <a href='features' ng-click='markAnnouncementsSeen(true)'>Tell me more</a>
-          <a href='javascript:;' ng-click='markAnnouncementsSeen(false)' style='float: right; padding-top: 2px;'>Not interested</span>
+          <span>{{announcement.buckyAnnouncement.shortTitle}}</span>
+          <a href='features' ng-click='markAnnouncementsSeen(announcement.id, true)'>Tell me more</a>
+          <a href='javascript:;' ng-click='markAnnouncementsSeen(announcement.id, false)' style='float: right; padding-top: 2px;'>Not interested</span>
         </li>
       </ul>
     </div>

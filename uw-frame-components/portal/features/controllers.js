@@ -66,7 +66,10 @@ define(['angular','require'], function(angular, require) {
        miscService.pushGAEvent(a,b,c);
      }
 
-     $scope.markAnnouncementsSeen = function(liked) {
+     $scope.markAnnouncementsSeen = function(announcement, liked) {
+       var seenAnnouncements = $localStorage.seenAnnoucements || [];
+       seenAnnouncements.push(announcement.id);
+       $localStorage.seenAnnoucements.push(announcement.id);
        $localStorage.lastSeenAnnouncementId = $scope.announcements[$scope.announcements.length - 1].id;
        //push change to storage to keep it in sync
        portalFeaturesService.saveLastSeenFeature(portalFeaturesService.TYPES.ANNOUNCEMENTS, $localStorage.lastSeenAnnouncementId);
@@ -196,6 +199,7 @@ define(['angular','require'], function(angular, require) {
 
      var init = function() {
       if (FEATURES.enabled && !$rootScope.GuestMode) {
+        $rootScope.seenAnnoucements = [];
         $scope.features = [];
         portalFeaturesService.getFeatures().then(function(data) {
           postGetData(data, false);

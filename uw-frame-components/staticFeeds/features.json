@@ -9,7 +9,7 @@
   "goLiveYear": 2015,
   "goLiveMonth": 6,
   "goLiveDay": 11,
-  "isPopup" : true,
+  "isPopup" : false,
   "isBuckyAnnouncement" : false,
   "popup": {
     "enabled": true,

@@ -68,7 +68,13 @@ define(['angular'], function(angular) {
       }
     };
     
+    var getSeenFeatures = function(type){
+        
+    }
     
+    var setSeenFeatures = function(type){
+        
+    }
 
     var getLastSeenFeature = function(type){
       return keyValueService.getValue(type);

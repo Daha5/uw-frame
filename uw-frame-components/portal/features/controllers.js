@@ -65,88 +65,117 @@ define(['angular','require'], function(angular, require) {
      $scope.pushGAEvent = function(a,b,c) {
        miscService.pushGAEvent(a,b,c);
      }
+     
+     $scope.markAnnouncementSeen = function(announcementID, liked){
+         //Store in session storage
+         if(!$sessionStorage.seenAnnouncmentIds){
+             $sessionStorage.seenAnnouncmentIds = [announcementID];
+         }else{
+             $sessionStorage.seenAnnouncmentIds.push(announcementID);
+         }
+         //persist it (coming later)
 
-     $scope.markAnnouncementsSeen = function(announcementID, liked) {
-       portalFeaturesService.markAnnouncmentSeen(announcementID).then(function(){
-           portalFeaturesService.getUnseenAnnouncements().then(function(data){
-               $scope.announcements = data;
-           });
-       });
-       //send ga event for features, if they read more or dismissed, and what was the last id
-       miscService.pushGAEvent('feature',liked ? 'read more' : 'dismissed', announcementID);
+         //if on xs-small nav, hide the drop down from hamburger button
+         if($scope.headerCtrl) {
+             $scope.headerCtrl.navbarCollapsed = true;
+           }
+
+         //something about postGetData
+         getAnnouncements($scope.features, true);
+
+         miscService.pushGAEvent('feature',liked ? 'read more' : 'dismissed', $localStorage.lastSeenAnnouncementId);
      }
 
      //local functions ---------------------------------------------------------
-
-     var postGetData = function(features) {
-       
-       //Sets the mascot for the announcement
+     
+     var getAnnouncements = function(features, justSaved){
+          $scope.announcements = portalFeaturesService.getUnseenAnnouncements();
+           
+           //if we have mascot announcements, set the mascot image
+           setMascot();
+     }
+     
+     var setMascot = function(){
          if($rootScope.portal && $rootScope.portal.theme) {
-           $scope.buckyImg = $rootScope.portal.theme.mascotImg || 'img/robot-taco.gif';
-         } else {
-           $scope.buckyImg = 'img/robot-taco.gif';
-         }
-         //Sets watcher so if you switch themes, you switch mascot
-         $rootScope.$watch('portal.theme', function(newVal, oldVal) {
-           if(newVal === oldVal) {
-             return;
+             $scope.buckyImg = $rootScope.portal.theme.mascotImg || 'img/robot-taco.gif';
            } else {
-             $scope.buckyImg = newVal.mascotImg || 'img/robot-taco.gif';
+             $scope.buckyImg = 'img/robot-taco.gif';
            }
-         });
-       //this is to setup popup modal stuff
-       var popupFeatures = filterFilter(features, {isPopup : true});
-       if(popupFeatures.length != 0) {
-         $scope.latestFeature = popupFeatures[popupFeatures.length -1];
-         var today = Date.parse(new Date());
-         var startDate = Date.parse(new Date($scope.latestFeature.popup.startYear, $scope.latestFeature.popup.startMonth, $scope.latestFeature.popup.startDay));
-         var endDate = Date.parse(new Date($scope.latestFeature.popup.endYear, $scope.latestFeature.popup.endMonth, $scope.latestFeature.popup.endDay));
+           
+           $rootScope.$watch('portal.theme', function(newVal, oldVal) {
+             if(newVal === oldVal) {
+               return;
+             } else {
+               $scope.buckyImg = newVal.mascotImg || 'img/robot-taco.gif';
+             }
+           });
+     }
+     
+     var getPopUps = function(features, justSaved){
+             //this is to setup popup modal stuff
+             var popupFeatures = filterFilter(features, {isPopup : true});
+             if(popupFeatures.length != 0) {
+               $scope.latestFeature = popupFeatures[popupFeatures.length -1];
+               var today = Date.parse(new Date());
+               var startDate = Date.parse(new Date($scope.latestFeature.popup.startYear, $scope.latestFeature.popup.startMonth, $scope.latestFeature.popup.startDay));
+               var endDate = Date.parse(new Date($scope.latestFeature.popup.endYear, $scope.latestFeature.popup.endMonth, $scope.latestFeature.popup.endDay));
 
-         var featureIsLive = today > startDate && today < endDate;
-         var featureIsEnabled = $scope.latestFeature.popup.enabled;
+               var featureIsLive = today > startDate && today < endDate;
+               var featureIsEnabled = $scope.latestFeature.popup.enabled;
 
-         var displayPopup = function() {
-             $modal.open({
-               animation: $scope.animationsEnabled,
-               templateUrl: require.toUrl('./partials/features-modal-template.html'),
-               size: 'lg',
-               scope: $scope
-             });
-             $localStorage.lastSeenFeature = $scope.latestFeature.id;
-             portalFeaturesService.saveLastSeenFeature(portalFeaturesService.TYPES.POPUP, $localStorage.lastSeenFeature);
-         };
+               var displayPopup = function() {
+                   $modal.open({
+                     animation: $scope.animationsEnabled,
+                     templateUrl: require.toUrl('./partials/features-modal-template.html'),
+                     size: 'lg',
+                     scope: $scope
+                   });
+                   $localStorage.lastSeenFeature = $scope.latestFeature.id;
+                   portalFeaturesService.saveLastSeenFeature(portalFeaturesService.TYPES.POPUP, $localStorage.lastSeenFeature);
+               };
 
-         if(featureIsLive && featureIsEnabled) {
-           if(portalFeaturesService.dbStoreLastSeenFeature()) {
-             portalFeaturesService.getLastSeenFeature(portalFeaturesService.TYPES.POPUP)
-                .then(function(data){//success
-                  $localStorage.lastSeenFeature = data.id || $localStorage.lastSeenFeature;
-                  if ($localStorage.lastSeenFeature < $scope.latestFeature.id) {
-                    displayPopup();
-                  }
-                }, function() {//fail
-                  //fallback to localstorage
-                  if ($localStorage.lastSeenFeature < $scope.latestFeature.id) {
-                    displayPopup();
-                  }
-                });
-           } else if ($localStorage.lastSeenFeature < $scope.latestFeature.id) {
-             displayPopup();
-           }
-         }
-       }
+               if(featureIsLive && featureIsEnabled) {
+                 if(portalFeaturesService.dbStoreLastSeenFeature()) {
+                   portalFeaturesService.getLastSeenFeature(portalFeaturesService.TYPES.POPUP)
+                      .then(function(data){//success
+                        $localStorage.lastSeenFeature = data.id || $localStorage.lastSeenFeature;
+                        if ($localStorage.lastSeenFeature < $scope.latestFeature.id) {
+                          displayPopup();
+                        }
+                      }, function() {//fail
+                        //fallback to localstorage
+                        if ($localStorage.lastSeenFeature < $scope.latestFeature.id) {
+                          displayPopup();
+                        }
+                      });
+                 } else if ($localStorage.lastSeenFeature < $scope.latestFeature.id) {
+                   displayPopup();
+                 }
+               }
+             }
      }
 
      var init = function() {
       if (FEATURES.enabled && !$rootScope.GuestMode) {
         $scope.features = [];
-        $scope.announcements = [];
-        portalFeaturesService.getFeatures().then(function(data) {
-            $scope.features = data;
-            postGetData(data);
-        });
-        portalFeaturesService.getUnseenAnnouncements().then(function(data) {
-            $scope.announcements = data;
+        portalFeaturesService.getFeatures().then(function(features) {
+          if (features.length > 0) {
+            $scope.features = features; //just setting this to scope so we can use it later
+            // handle legacy local storage
+            if ($localStorage.lastSeenFeature === -1) {
+              if ($localStorage.hasSeenWelcome) {
+                $localStorage.lastSeenFeature = 1;
+              } else {
+                $localStorage.lastSeenFeature = 0;
+              }
+              delete $localStorage.hasSeenWelcome;
+            }
+            if("BUCKY" === $scope.mode || "BUCKY_MOBILE" === $scope.mode) {
+              getAnnouncements(features, false);
+            }else{
+              getPopUps(features, false);
+            }
+          }
         });
       }
     };

@@ -17,7 +17,7 @@ define(['angular'], function(angular) {
             'sessionInfo' : 'staticFeeds/session.json',
             'notificationsURL' : '/web/staticFeeds/notifications.json',
             'loginSilentURL' : '/portal/Login?silent=true',
-            'kvURL' : '/storage',
+            //'kvURL' : '/storage',
             'groupURL' : '/portal/api/groups'
         })
         .value('NAMES', {

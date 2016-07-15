@@ -28,8 +28,6 @@ define(['angular'], function(angular) {
       "ANNOUNCEMENTS" : KV_KEYS.LAST_VIEWED_ANNOUNCEMENT_ID,
       "POPUP" : KV_KEYS.LAST_VIEWED_POPUP_ID
     };
-    
-    var getUnseenAnnouncementsPromise;
 
     var getFeatures = function() {
       if(!featuresPromise) {
@@ -73,7 +71,7 @@ define(['angular'], function(angular) {
           });
       }
     };
-    
+
     var getSeenAnnouncments = function(){
         return $q(function(resolve, reject){
             if($sessionStorage.seenAnnouncmentIds){
@@ -81,28 +79,34 @@ define(['angular'], function(angular) {
             }else{
                 return resolve([]);
             }
-            
+
             //if Session Storage is available, choose it
             //else go to keyValueStore
         });
     }
 
+    var markAnnouncementSeen = function(announcementID){
+      //Store in session storage
+      if(!$sessionStorage.seenAnnouncmentIds){
+          $sessionStorage.seenAnnouncmentIds = [announcementID];
+      }else{
+          $sessionStorage.seenAnnouncmentIds.push(announcementID);
+      }
+    }
+
     var getUnseenAnnouncements = function(){
         var successFn, errorFn;
-        if(getUnseenAnnouncementsPromise){
-            return getUnseenAnnouncementsPromise;
-        }
-        
+
         successFn = function(data){
             //features in data[0]
             //seenAnnouncments in data[1]
-            
+
             var announcements = filterFilter(data[0], {isBuckyAnnouncement : true});
-            
+
             if(announcements && announcements.length != 0) {
                 //filter down to ones they haven't seen
                 var hasNotSeen = function(feature) {
-                  if(data[1].indexOf(feature.id) === -1) {
+                  if(data[1].indexOf(feature.id) !== -1) {
                     return false;
                   } else {
                     //check dates
@@ -112,8 +116,7 @@ define(['angular'], function(angular) {
                     if(startDate <= today && today <= expirationDate) {
                       return true;
                     } else if(expirationDate < today){
-                      //expired state, mark as read so its faster next time
-                      $localStorage.lastSeenAnnouncementId = feature.id;
+                      markAnnouncementSeen(feature.id);
                       return false;
                     } else {
                       //hasn't started yet
@@ -121,26 +124,27 @@ define(['angular'], function(angular) {
                     }
                   }
                 }
-                
-                return announcments.filter(hasNotSeen);
-                
+
+                return announcements.filter(hasNotSeen);
+
             }
-            
+
         };
-        
+
         errorFn = function(reason){
             console.log("error retreiving unseenAnnouncements: " +  response.status);
             return null;
         };
-        
-        getUnseenAnnouncementsPromise = $q.all(getFeatures(), getSeenAnnouncments()).then(successFn, errorFn);
-        
+
+        var getUnseenAnnouncementsPromise = $q.all([getFeatures(), getSeenAnnouncments()]).then(successFn, errorFn);
+
         return getUnseenAnnouncementsPromise;
     }
-    
-    
+
+
     var getLastSeenFeature = function(type){
-      return keyValueService.getValue(type);
+      var lastSeenFeature = keyValueService.getValue(type);
+      return lastSeenFeature;
     }
 
     var dbStoreLastSeenFeature = function() {
@@ -153,6 +157,7 @@ define(['angular'], function(angular) {
       getLastSeenFeature : getLastSeenFeature,
       dbStoreLastSeenFeature : dbStoreLastSeenFeature,
       getUnseenAnnouncements: getUnseenAnnouncements,
+      markAnnouncementSeen: markAnnouncementSeen,
       TYPES : TYPES
     };
 

@@ -65,14 +65,9 @@ define(['angular','require'], function(angular, require) {
      $scope.pushGAEvent = function(a,b,c) {
        miscService.pushGAEvent(a,b,c);
      }
-     
+
      $scope.markAnnouncementSeen = function(announcementID, liked){
-         //Store in session storage
-         if(!$sessionStorage.seenAnnouncmentIds){
-             $sessionStorage.seenAnnouncmentIds = [announcementID];
-         }else{
-             $sessionStorage.seenAnnouncmentIds.push(announcementID);
-         }
+         portalFeaturesService.markAnnouncementSeen(announcementID);
          //persist it (coming later)
 
          //if on xs-small nav, hide the drop down from hamburger button
@@ -80,28 +75,22 @@ define(['angular','require'], function(angular, require) {
              $scope.headerCtrl.navbarCollapsed = true;
            }
 
-         //something about postGetData
-         getAnnouncements($scope.features, true);
+         //reloadAnnouncements
+         portalFeaturesService.getUnseenAnnouncements().then(function(unseenAnnouncements) {
+           $scope.announcements = unseenAnnouncements;
+         });
 
          miscService.pushGAEvent('feature',liked ? 'read more' : 'dismissed', $localStorage.lastSeenAnnouncementId);
      }
 
      //local functions ---------------------------------------------------------
-     
-     var getAnnouncements = function(features, justSaved){
-          $scope.announcements = portalFeaturesService.getUnseenAnnouncements();
-           
-           //if we have mascot announcements, set the mascot image
-           setMascot();
-     }
-     
+
      var setMascot = function(){
          if($rootScope.portal && $rootScope.portal.theme) {
              $scope.buckyImg = $rootScope.portal.theme.mascotImg || 'img/robot-taco.gif';
            } else {
              $scope.buckyImg = 'img/robot-taco.gif';
            }
-           
            $rootScope.$watch('portal.theme', function(newVal, oldVal) {
              if(newVal === oldVal) {
                return;
@@ -110,7 +99,7 @@ define(['angular','require'], function(angular, require) {
              }
            });
      }
-     
+
      var getPopUps = function(features, justSaved){
              //this is to setup popup modal stuff
              var popupFeatures = filterFilter(features, {isPopup : true});
@@ -155,28 +144,30 @@ define(['angular','require'], function(angular, require) {
              }
      }
 
-     var init = function() {
+    var init = function() {
       if (FEATURES.enabled && !$rootScope.GuestMode) {
-        $scope.features = [];
-        portalFeaturesService.getFeatures().then(function(features) {
-          if (features.length > 0) {
-            $scope.features = features; //just setting this to scope so we can use it later
-            // handle legacy local storage
-            if ($localStorage.lastSeenFeature === -1) {
-              if ($localStorage.hasSeenWelcome) {
-                $localStorage.lastSeenFeature = 1;
-              } else {
-                $localStorage.lastSeenFeature = 0;
-              }
-              delete $localStorage.hasSeenWelcome;
-            }
-            if("BUCKY" === $scope.mode || "BUCKY_MOBILE" === $scope.mode) {
-              getAnnouncements(features, false);
-            }else{
-              getPopUps(features, false);
-            }
+        // handle legacy local storage
+        if ($localStorage.lastSeenFeature === -1) {
+          if ($localStorage.hasSeenWelcome) {
+            $localStorage.lastSeenFeature = 1;
+          } else {
+            $localStorage.lastSeenFeature = 0;
           }
-        });
+          delete $localStorage.hasSeenWelcome;
+        }
+        //end handle legacy local storage
+
+        //Mode is set to bucky or bucky_mobile to signal mascot init of controller
+        if("BUCKY" === $scope.mode || "BUCKY_MOBILE" === $scope.mode) {
+          portalFeaturesService.getUnseenAnnouncements().then(function(unseenAnnouncements) {
+            $scope.announcements = unseenAnnouncements;
+          });
+          setMascot();
+        }else{
+          portalFeaturesService.getFeatures().then(function(features) {
+            getPopUps(features, false);
+          });
+        }
       }
     };
 

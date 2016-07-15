@@ -32,6 +32,7 @@ define(['angular'], function(angular) {
       $scope.resetAnnouncements = function() {
         //todo - call feature service
         delete $sessionStorage.seenAnnouncmentIds;
+        delete $sessionStorage.seenPopupIds;
         if(keyValueService.isKVStoreActivated()) {
           $scope.loadingResetAnnouncements = true;
           $q.all([keyValueService.deleteValue(KV_KEYS.LAST_VIEWED_ANNOUNCEMENT_ID),

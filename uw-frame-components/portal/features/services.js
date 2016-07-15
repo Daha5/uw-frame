@@ -24,10 +24,6 @@ define(['angular'], function(angular) {
                                                  FEATURES) {
     var featuresPromise, filteredFeaturesPromise;
 
-    var TYPES = {
-      "ANNOUNCEMENTS" : KV_KEYS.LAST_VIEWED_ANNOUNCEMENT_ID,
-      "POPUP" : KV_KEYS.LAST_VIEWED_POPUP_ID
-    };
 
     var getFeatures = function() {
       if(!featuresPromise) {
@@ -61,36 +57,47 @@ define(['angular'], function(angular) {
       }
     };//end get features
 
-    var saveLastSeenFeature = function(type, id) {
-      if(keyValueService.isKVStoreActivated()) {
-        var storage = {};
-        storage.id = id;
-        keyValueService.setValue(type, storage)
-          .then(function(result){
-            console.log("Saved feature id to " + result + " successfully.");
-          });
-      }
-    };
 
     var getSeenAnnouncments = function(){
-        return $q(function(resolve, reject){
-            if($sessionStorage.seenAnnouncmentIds){
-                return resolve($sessionStorage.seenAnnouncmentIds);
-            }else{
-                return resolve([]);
-            }
-
-            //if Session Storage is available, choose it
-            //else go to keyValueStore
-        });
+      return $q(function(resolve, reject){
+        if($sessionStorage.seenAnnouncmentIds){
+          return resolve($sessionStorage.seenAnnouncmentIds);
+        }else{
+          //if Session Storage is available, choose it
+          //else go to keyValueStore
+          return resolve([]);
+        }
+            
+      });
     }
 
+    var getSeenPopups = function(){
+      return $q(function(resolve, reject){
+        if($sessionStorage.seenPopupIds){
+          return resolve($sessionStorage.seenPopupIds);
+        }else{
+          //if Session Storage is available, choose it
+          //else go to keyValueStore
+          return resolve([]);
+        }
+      });
+    }
+    
     var markAnnouncementSeen = function(announcementID){
       //Store in session storage
       if(!$sessionStorage.seenAnnouncmentIds){
           $sessionStorage.seenAnnouncmentIds = [announcementID];
       }else{
           $sessionStorage.seenAnnouncmentIds.push(announcementID);
+      }
+    }
+    
+    var markPopupSeen = function(popupID){
+      //Store in session storage
+      if(!$sessionStorage.seenPopupIds){
+        $sessionStorage.seenPopupIds = [popupID];
+      }else{
+        $sessionStorage.seenPopupIds.push(popupID);
       }
     }
 
@@ -141,24 +148,55 @@ define(['angular'], function(angular) {
         return getUnseenAnnouncementsPromise;
     }
 
-
-    var getLastSeenFeature = function(type){
-      var lastSeenFeature = keyValueService.getValue(type);
-      return lastSeenFeature;
-    }
-
-    var dbStoreLastSeenFeature = function() {
-      return keyValueService.isKVStoreActivated();
+    
+    var getUnseenPopups = function(){
+      var successFn, errorFn;
+      
+      successFn = function(data){
+        var popupFeatures = filterFilter(data[0], {isPopup : true});
+        if(popupFeatures.length != 0){
+          
+          var today = Date.parse(new Date());
+          
+          var filterExpiredPopups = function(feature){
+            var startDate = Date.parse(new Date(feature.popup.startYear, feature.popup.startMonth, feature.popup.startDay));
+            var endDate = Date.parse(new Date(feature.popup.endYear, feature.popup.endMonth, feature.popup.endDay));
+            return (today > startDate && today < endDate);
+            //TODO add the expired ones to read
+          }
+          
+          var filterUnEnabledPopups = function(feature){
+              return feature.popup.enabled;
+          }
+          
+          var filterSeenPopups = function(feature){
+              if(data[1].indexOf(feature.id) !== -1){
+                  return false;
+              }
+              return true;
+          }
+          
+          var filteredPopupFeatures = popupFeatures.filter(filterSeenPopups).filter(filterExpiredPopups).filter(filterUnEnabledPopups);
+         
+          return filteredPopupFeatures;
+          
+        }
+      }
+      
+      errorFn = function(reason){
+          console.log("error retreiving unseenPopups: " +  response.status);
+          return null;
+      };
+        
+      return $q.all([getFeatures(), getSeenPopups()]).then(successFn, errorFn);
     }
 
     return {
       getFeatures : getFeatures,
-      saveLastSeenFeature : saveLastSeenFeature,
-      getLastSeenFeature : getLastSeenFeature,
-      dbStoreLastSeenFeature : dbStoreLastSeenFeature,
       getUnseenAnnouncements: getUnseenAnnouncements,
       markAnnouncementSeen: markAnnouncementSeen,
-      TYPES : TYPES
+      markPopupSeen:markPopupSeen,
+      getUnseenPopups: getUnseenPopups
     };
 
   }]);

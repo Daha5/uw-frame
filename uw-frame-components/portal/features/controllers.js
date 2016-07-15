@@ -43,6 +43,7 @@ define(['angular','require'], function(angular, require) {
                                            '$document',
                                            'FEATURES',
                                            'filterFilter',
+                                           '$filter',
                                            '$modal',
                                            'portalFeaturesService',
                                            'miscService',
@@ -54,6 +55,7 @@ define(['angular','require'], function(angular, require) {
                                            $document,
                                            FEATURES,
                                            filterFilter,
+                                           $filter,
                                            $modal,
                                            portalFeaturesService,
                                            miscService,
@@ -68,12 +70,6 @@ define(['angular','require'], function(angular, require) {
 
      $scope.markAnnouncementSeen = function(announcementID, liked){
          portalFeaturesService.markAnnouncementSeen(announcementID);
-         //persist it (coming later)
-
-         //if on xs-small nav, hide the drop down from hamburger button
-         if($scope.headerCtrl) {
-             $scope.headerCtrl.navbarCollapsed = true;
-           }
 
          //reloadAnnouncements
          portalFeaturesService.getUnseenAnnouncements().then(function(unseenAnnouncements) {
@@ -82,6 +78,8 @@ define(['angular','require'], function(angular, require) {
 
          miscService.pushGAEvent('feature',liked ? 'read more' : 'dismissed', $localStorage.lastSeenAnnouncementId);
      }
+     
+     
 
      //local functions ---------------------------------------------------------
 
@@ -99,50 +97,35 @@ define(['angular','require'], function(angular, require) {
              }
            });
      }
-
-     var getPopUps = function(features, justSaved){
-             //this is to setup popup modal stuff
-             var popupFeatures = filterFilter(features, {isPopup : true});
-             if(popupFeatures.length != 0) {
-               $scope.latestFeature = popupFeatures[popupFeatures.length -1];
-               var today = Date.parse(new Date());
-               var startDate = Date.parse(new Date($scope.latestFeature.popup.startYear, $scope.latestFeature.popup.startMonth, $scope.latestFeature.popup.startDay));
-               var endDate = Date.parse(new Date($scope.latestFeature.popup.endYear, $scope.latestFeature.popup.endMonth, $scope.latestFeature.popup.endDay));
-
-               var featureIsLive = today > startDate && today < endDate;
-               var featureIsEnabled = $scope.latestFeature.popup.enabled;
-
-               var displayPopup = function() {
-                   $modal.open({
-                     animation: $scope.animationsEnabled,
-                     templateUrl: require.toUrl('./partials/features-modal-template.html'),
-                     size: 'lg',
-                     scope: $scope
-                   });
-                   $localStorage.lastSeenFeature = $scope.latestFeature.id;
-                   portalFeaturesService.saveLastSeenFeature(portalFeaturesService.TYPES.POPUP, $localStorage.lastSeenFeature);
-               };
-
-               if(featureIsLive && featureIsEnabled) {
-                 if(portalFeaturesService.dbStoreLastSeenFeature()) {
-                   portalFeaturesService.getLastSeenFeature(portalFeaturesService.TYPES.POPUP)
-                      .then(function(data){//success
-                        $localStorage.lastSeenFeature = data.id || $localStorage.lastSeenFeature;
-                        if ($localStorage.lastSeenFeature < $scope.latestFeature.id) {
-                          displayPopup();
-                        }
-                      }, function() {//fail
-                        //fallback to localstorage
-                        if ($localStorage.lastSeenFeature < $scope.latestFeature.id) {
-                          displayPopup();
-                        }
-                      });
-                 } else if ($localStorage.lastSeenFeature < $scope.latestFeature.id) {
-                   displayPopup();
-                 }
-               }
-             }
-     }
+     
+     var getPopups = function(){
+         portalFeaturesService.getUnseenPopups().then(function(unSeenPopups) {
+           if(unSeenPopups.length !=0){
+             var orderedPopups = $filter('orderBy')(unSeenPopups, ['popup.startYear', 'popup.startMonth', 'popup.startDay', 'id']);
+             $scope.latestFeature = orderedPopups[0];
+             var displayPopup = function() {
+               var modalInstance = $modal.open({
+                 animation: $scope.animationsEnabled,
+                 templateUrl: require.toUrl('./partials/features-modal-template.html'),
+                 size: 'lg',
+                 scope: $scope
+               });
+               modalInstance.result.then(function(data){
+                   //resolves upon closing of modal
+                   miscService.pushGAEvent('popup','closed', orderedPopups[0].id);
+                   portalFeaturesService.markPopupSeen(orderedPopups[0].id);
+                   getPopups();
+               }, function(data){
+                   //rejects upon dismissing of modal
+                   miscService.pushGAEvent('popup','dismissed', orderedPopups[0].id);
+                   portalFeaturesService.markPopupSeen(orderedPopups[0].id);
+                   getPopups();
+               });
+             };
+             displayPopup();
+           }
+         });
+       }
 
     var init = function() {
       if (FEATURES.enabled && !$rootScope.GuestMode) {
@@ -164,9 +147,7 @@ define(['angular','require'], function(angular, require) {
           });
           setMascot();
         }else{
-          portalFeaturesService.getFeatures().then(function(features) {
-            getPopUps(features, false);
-          });
+          getPopups();
         }
       }
     };

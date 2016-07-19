@@ -129,16 +129,10 @@ define(['angular','require'], function(angular, require) {
 
     var init = function() {
       if (FEATURES.enabled && !$rootScope.GuestMode) {
-        // handle legacy local storage
-        if ($localStorage.lastSeenFeature === -1) {
-          if ($localStorage.hasSeenWelcome) {
-            $localStorage.lastSeenFeature = 1;
-          } else {
-            $localStorage.lastSeenFeature = 0;
-          }
-          delete $localStorage.hasSeenWelcome;
-        }
-        //end handle legacy local storage
+        
+        //handle legacy local storage #deleteIt
+        delete $localStorage.lastSeenFeature;
+        delete $localStorage.hasSeenWelcome;
 
         //Mode is set to bucky or bucky_mobile to signal mascot init of controller
         if("BUCKY" === $scope.mode || "BUCKY_MOBILE" === $scope.mode) {

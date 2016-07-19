@@ -126,7 +126,7 @@ define(['angular'], function(angular) {
     var getSeenAnnouncments = function(){
       return $q(function(resolve, reject){
         if(!$sessionStorage.seenAnnouncmentIds){
-          updateLegacySeenAnnouncements().then(
+          updateLegacySeenAnnouncements().then(function(){
             keyValueService.getValue(KV_KEYS.VIEWED_ANNOUNCEMENT_IDS).then(function(data){
               if(!Array.isArray(data)){
                 $sessionStorage.seenAnnouncmentIds = [];
@@ -134,13 +134,12 @@ define(['angular'], function(angular) {
                 $sessionStorage.seenAnnouncmentIds = data;
               }
               return resolve($sessionStorage.seenAnnouncmentIds);
-            }, function(response){ //getSeenAnnouncmeentsFailed
+            }, function(response){
               return reject(response);
-            })
-            ,function(response){ //updateLegacyFailed
-              return reject(response);
-            }
-          );
+            });
+          }, function(response){
+            return reject(response);
+          });
         }else{
           return resolve($sessionStorage.seenAnnouncmentIds);
         };
@@ -150,7 +149,7 @@ define(['angular'], function(angular) {
     var getSeenPopups = function(){
       return $q(function(resolve, reject){
         if(!$sessionStorage.seenPopupIds){
-          updateLegacyPopups().then(
+          updateLegacyPopups().then(function(){
             keyValueService.getValue(KV_KEYS.VIEWED_POPUP_IDS).then(function(data){
               if(!Array.isArray(data)){
                 $sessionStorage.seenPopupIds = [];
@@ -158,11 +157,12 @@ define(['angular'], function(angular) {
                 $sessionStorage.seenPopupIds = data;
               }
               return resolve($sessionStorage.seenPopupIds);
-            }),
-            function(response){ //updateLegacyFailed
+            }, function(response){
               return reject(response);
-            }
-          );
+            });
+          }, function(response){
+            return reject(response);
+          });
         }else{
           return resolve($sessionStorage.seenPopupIds);
         };

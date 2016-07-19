@@ -65,7 +65,7 @@ define(['angular'], function(angular) {
             if(data && data.id){
               //create an array with the seen ids
               var seenAnnouncements = [];
-              for(i=0; i<data.id; i++){
+              for(var i=0; i<=data.id; i++){
                 seenAnnouncements.push(i);
               }
               $sessionStorage.seenAnnouncmentIds = seenAnnouncements;
@@ -97,7 +97,7 @@ define(['angular'], function(angular) {
               if(data && data.id){
                 //create an array with the seen ids
                 var seenPopups = [];
-                for(i=0; i<data.id; i++){
+                for(var i=0; i<=data.id; i++){
                   seenPopups.push(i);
                 }
                 $sessionStorage.seenPopupIds = seenPopups;
@@ -137,9 +137,10 @@ define(['angular'], function(angular) {
             }, function(response){ //getSeenAnnouncmeentsFailed
               return reject(response);
             })
-          , function(response){ //updateLegacyFailed
-            return reject(response);
-          });
+            ,function(response){ //updateLegacyFailed
+              return reject(response);
+            }
+          );
         }else{
           return resolve($sessionStorage.seenAnnouncmentIds);
         };
@@ -149,14 +150,19 @@ define(['angular'], function(angular) {
     var getSeenPopups = function(){
       return $q(function(resolve, reject){
         if(!$sessionStorage.seenPopupIds){
-          keyValueService.getValue(KV_KEYS.VIEWED_POPUP_IDS).then(function(data){
-            if(!Array.isArray(data)){
-              $sessionStorage.seenPopupIds = [];
-            }else{
-              $sessionStorage.seenPopupIds = data;
+          updateLegacyPopups().then(
+            keyValueService.getValue(KV_KEYS.VIEWED_POPUP_IDS).then(function(data){
+              if(!Array.isArray(data)){
+                $sessionStorage.seenPopupIds = [];
+              }else{
+                $sessionStorage.seenPopupIds = data;
+              }
+              return resolve($sessionStorage.seenPopupIds);
+            }),
+            function(response){ //updateLegacyFailed
+              return reject(response);
             }
-            return resolve($sessionStorage.seenPopupIds);
-          });
+          );
         }else{
           return resolve($sessionStorage.seenPopupIds);
         };

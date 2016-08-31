@@ -11,7 +11,7 @@
     "postbuild-docs": "grunt",
     "build-java": "cd uw-frame-java && mvn clean install",
     "prebuild-static": "npm install",
-    "build-static": "cd uw-frame-static && ./build.sh",
+    "build-static": "cd uw-frame-static && ./build.sh compress",
     "postbuild-static": "grunt",
     "predocs": "npm run build-docs",
     "docs": "cd docs/target && superstatic",

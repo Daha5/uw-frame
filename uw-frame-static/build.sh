@@ -5,7 +5,13 @@ rm -rf target
 mkdir -p target
 
 ## Resources
-cp -r ../uw-frame-components/* ./target/
+#cp -r ../uw-frame-components/* ./target/
+
+if [ "$1" == "compress" ]
+then
+  ./compress.sh;
+fi
+
 
 ## Copy over superstatic configuration for dev superstatic instance
 cp superstatic.json ./target
